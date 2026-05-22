@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Citiri Contoare — SP Sângeorgiu de Mureș</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --blue:#1a4f8a; --blue-dk:#12376a; --blue-md:#2d6cc0; --blue-lt:#e8f0fb;
+  --green:#1a7a4a; --green-lt:#e8f6ef;
+  --red:#c0392b; --red-lt:#fde8e6;
+  --gold:#f5a623; --gold-lt:#fff8ec;
+  --gray-bg:#eef2f8; --gray:#f4f6f9; --gray-md:#dde3ec; --gray-dk:#9aacbf;
+  --text:#1a2340; --soft:#5a6a8a;
+  --r:12px; --sh:0 2px 12px rgba(26,79,138,.10); --sh-lg:0 8px 32px rgba(26,79,138,.18);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--gray-bg);color:var(--text);min-height:100vh}
+input,button,select{font-family:inherit}
+.hidden{display:none!important}
+
+/* ── AUTH ── */
+.auth-bg{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;background:linear-gradient(155deg,#12376a 0%,#2d6cc0 100%)}
+.auth-panel{background:#fff;border-radius:20px;padding:32px 24px 28px;width:100%;max-width:400px;box-shadow:0 12px 48px rgba(0,0,0,.3)}
+.auth-logo{font-size:42px;text-align:center;margin-bottom:8px}
+.auth-h1{font-size:20px;font-weight:700;text-align:center;color:var(--blue);margin-bottom:2px}
+.auth-sub{font-size:13px;color:var(--soft);text-align:center;margin-bottom:22px}
+.f-label{display:block;font-size:11px;font-weight:700;color:var(--soft);margin-bottom:5px;text-transform:uppercase;letter-spacing:.7px}
+.f-input{width:100%;padding:12px 14px;border:1.5px solid var(--gray-md);border-radius:10px;font-size:16px;color:var(--text);background:var(--gray);outline:none;margin-bottom:12px}
+.f-input:focus{border-color:var(--blue-md);background:#fff}
+.pin-dots{display:flex;justify-content:center;gap:14px;margin:14px 0 6px}
+.pd{width:14px;height:14px;border-radius:50%;border:2px solid var(--gray-md);background:#fff;transition:all .2s}
+.pd.on{background:var(--blue);border-color:var(--blue)}.pd.err{background:var(--red);border-color:var(--red)}
+.pin-err{text-align:center;color:var(--red);font-size:13px;font-weight:600;min-height:18px;margin-bottom:10px}
+.pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.pb{background:var(--gray);border:1.5px solid var(--gray-md);border-radius:10px;padding:16px 8px;font-family:'Courier New',monospace;font-size:22px;font-weight:600;color:var(--text);cursor:pointer;text-align:center;transition:background .15s,transform .1s}
+.pb:active{background:var(--blue-lt);transform:scale(.93)}.pb.del{font-size:16px;color:var(--soft);font-family:inherit}.pb.z{grid-column:2}
+.btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;transition:transform .1s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn:active{transform:scale(.97)}.btn-p{background:var(--blue);color:#fff}.btn-p:hover{background:var(--blue-md)}.btn-s{background:var(--gray);color:var(--soft)}.btn-g{background:var(--green);color:#fff}
+.divider{text-align:center;font-size:12px;color:var(--soft);margin:10px 0}
+
+/* ── SETUP / ADMIN ── */
+.setup-page{min-height:100vh;background:var(--gray-bg);padding-bottom:80px}
+.setup-hdr{background:var(--blue-dk);color:#fff;padding:14px 16px}
+.setup-hdr h1{font-size:16px;font-weight:700}.setup-hdr p{font-size:12px;opacity:.75;margin-top:2px}
+.setup-body{padding:14px;max-width:720px;margin:0 auto}
+.card-section{background:#fff;border-radius:var(--r);padding:14px 16px;margin-bottom:12px;box-shadow:var(--sh)}
+.sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--soft);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--gray-md)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.ff{display:flex;flex-direction:column;gap:4px}.ff.full{grid-column:1/-1}
+.ff label{font-size:12px;font-weight:600;color:var(--soft)}
+.ff input{padding:9px 12px;border:1.5px solid var(--gray-md);border-radius:8px;font-size:14px;color:var(--text);background:var(--gray);outline:none}
+.ff input:focus{border-color:var(--blue-md);background:#fff}
+.ref-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-md)}
+.ref-row:last-child{border-bottom:none}
+.rn{flex:1;font-size:13px;font-weight:600}.rn small{font-size:11px;color:var(--soft);font-weight:400;display:block}
+.ri{width:120px;padding:7px 10px;border:1.5px solid var(--gray-md);border-radius:7px;font-family:'Courier New',monospace;font-size:14px;text-align:right;background:var(--gray);outline:none}
+.ri:focus{border-color:var(--blue-md);background:#fff}
+.hist-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-md);cursor:pointer}
+.hist-row:last-child{border-bottom:none}.hist-row:hover .hist-lbl{color:var(--blue)}
+.hist-lbl{flex:1;font-size:14px;font-weight:600}.hist-meta{font-size:12px;color:var(--soft)}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px}
+.b-done{background:var(--green-lt);color:var(--green)}.b-part{background:var(--gold-lt);color:#b07800}
+.b-cc{background:var(--blue-lt);color:var(--blue-md)}.b-cnc{background:var(--gold-lt);color:#b07800}
+
+/* ── MAIN APP ── */
+#appScreen{min-height:100vh;display:flex;flex-direction:column}
+.app-hdr{background:var(--blue);color:#fff;padding:11px 14px 9px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.app-hdr-top{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.app-title{flex:1;font-size:14px;font-weight:700;line-height:1.3}
+.app-op{font-size:10px;opacity:.75}
+.hbtn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:12px;font-weight:600;padding:5px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.hbtn:active{background:rgba(255,255,255,.3)}
+.prog-bar{background:rgba(255,255,255,.22);border-radius:99px;height:4px;overflow:hidden;margin-top:7px}
+.prog-fill{height:100%;background:var(--gold);border-radius:99px;transition:width .4s}
+.prog-lbl{font-size:10px;opacity:.75;margin-top:3px;display:flex;justify-content:space-between}
+
+.toolbar{background:#fff;border-bottom:1px solid var(--gray-md);padding:8px 10px;position:sticky;top:94px;z-index:99;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.srch{flex:1;min-width:130px;padding:8px 12px;border:1.5px solid var(--gray-md);border-radius:8px;font-size:14px;color:var(--text);background:var(--gray);outline:none}
+.srch:focus{border-color:var(--blue-md);background:#fff}
+.fbtn{padding:7px 11px;border:1.5px solid var(--gray-md);border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--soft);white-space:nowrap;transition:all .15s}
+.fbtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.vbtn{padding:7px 10px;border:1.5px solid var(--gray-md);border-radius:7px;font-size:14px;cursor:pointer;background:#fff;color:var(--soft);transition:all .15s}
+.vbtn.on{background:var(--blue-lt);border-color:var(--blue-md);color:var(--blue)}
+
+/* ── CARD VIEW ── */
+.sec-hdr{padding:8px 12px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--soft);background:var(--gray-bg);border-top:1px solid var(--gray-md);margin-top:6px}
+.kard{margin:5px 10px;background:#fff;border-radius:var(--r);box-shadow:var(--sh);border:1.5px solid transparent;overflow:hidden}
+.kard.done{border-color:var(--green)}
+.kard-head{display:flex;align-items:flex-start;gap:10px;padding:10px 12px 8px}
+.sdot{width:9px;height:9px;border-radius:50%;background:var(--gray-md);flex-shrink:0;margin-top:5px;transition:background .25s}
+.kard.done .sdot{background:var(--green)}
+.kn strong{font-size:14px;font-weight:700;line-height:1.3;display:block}
+.kn span{font-size:11px;color:var(--soft)}
+.kfields{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--gray-md)}
+.kf{padding:9px 10px;border-right:1px solid var(--gray-md)}.kf:last-child{border-right:none}
+.kfl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--soft);margin-bottom:3px}
+.kfv{font-family:'Courier New',monospace;font-size:14px;font-weight:600;color:var(--text)}
+.kf-in{background:var(--gold-lt);border-top:2px solid var(--gold)}
+.kf-in input{background:transparent;border:none;outline:none;font-family:'Courier New',monospace;font-size:15px;font-weight:600;color:var(--text);width:100%;min-height:26px;padding:0}
+.kf-cs{background:var(--blue-lt)}
+.kf-cs.pos .kfv{color:var(--green)}.kf-cs.neg .kfv{color:var(--red)}
+.kard-extra{border-top:1px solid var(--gray-md);padding:6px 12px;background:var(--gray);display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.xe{font-size:11px}.xe .xl{font-size:9px;color:var(--soft);text-transform:uppercase;letter-spacing:.5px}.xe .xv{font-weight:600;color:var(--text);word-break:break-all;font-size:11px}
+.kard-obs{border-top:1px solid var(--gray-md);padding:7px 10px}
+.kard-obs input{width:100%;border:1.5px solid var(--gray-md);border-radius:7px;padding:6px 10px;font-size:13px;color:var(--text);background:var(--gray);outline:none}
+.kard-obs input:focus{border-color:var(--blue-md);background:#fff}
+.read-meta{font-size:10px;color:var(--soft);padding:3px 12px 6px}
+
+/* ── TABLE VIEW ── */
+.tbl-wrap{overflow-x:auto;padding-bottom:130px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:960px}
+thead{background:var(--blue);color:#fff;position:sticky;top:0;z-index:50}
+thead th{padding:9px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--gray-md);background:#fff;transition:background .1s}
+tbody tr:hover{background:var(--blue-lt)}
+tbody tr.done{background:#f0fbf5}
+tbody tr.done:hover{background:#daf3e8}
+td{padding:8px 10px;vertical-align:middle}
+td.nm{font-weight:700;font-size:13px}
+td.mn{font-family:'Courier New',monospace}
+td.sm{font-size:11px;color:var(--soft);font-family:'Courier New',monospace}
+.ti{width:110px;padding:5px 8px;border:1.5px solid var(--gold);border-radius:7px;font-family:'Courier New',monospace;font-size:13px;background:var(--gold-lt);outline:none;color:var(--text)}
+.ti:focus{border-color:var(--blue-md);background:#fff}
+.to{width:130px;padding:4px 8px;border:1.5px solid var(--gray-md);border-radius:7px;font-size:12px;background:var(--gray);outline:none;color:var(--text)}
+.to:focus{border-color:var(--blue-md);background:#fff}
+.cp{color:var(--green);font-weight:700}.cn{color:var(--red);font-weight:700}
+.ktel{display:block;margin-top:3px}.ktel a{color:var(--blue-md);font-size:12px;font-weight:600;text-decoration:none}.ktel a:hover{text-decoration:underline}
+.tbl-sec-row td{background:var(--gray-bg);color:var(--soft);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:7px 10px;border-top:2px solid var(--gray-md)}
+
+/* ── FAB & MODAL ── */
+.fab{position:fixed;bottom:18px;left:12px;right:12px;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(26,79,138,.4);display:flex;align-items:center;justify-content:center;gap:8px;z-index:200}
+.fab:active{transform:scale(.97)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,20,50,.65);z-index:300;align-items:flex-end;backdrop-filter:blur(4px)}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:22px 18px 40px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--soft);margin-bottom:16px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.sbox{background:var(--gray);border-radius:10px;padding:14px;text-align:center}
+.sbox .n{font-size:28px;font-weight:700;color:var(--blue)}.sbox .l{font-size:11px;color:var(--soft);margin-top:2px}
+.sbox.g .n{color:var(--green)}.sbox.o .n{color:var(--gold)}
+.pend-box{background:var(--red-lt);border-radius:10px;padding:12px;margin-bottom:14px;max-height:180px;overflow-y:auto}
+.pend-box h4{font-size:12px;color:var(--red);font-weight:700;margin-bottom:8px}
+.pend-name{font-size:13px;padding:3px 0;border-bottom:1px solid rgba(192,57,43,.15)}
+.pend-name:last-child{border-bottom:none}
+.no-res{text-align:center;padding:48px 20px;color:var(--soft)}
+
+/* ── HIST MODAL ── */
+.hist-detail{padding:4px 0}
+.hd-row{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--gray-md);font-size:13px}
+.hd-row:last-child{border-bottom:none}
+.hd-name{flex:1;font-weight:600}.hd-num{font-family:'Courier New',monospace;color:var(--soft)}
+.hd-cs{font-family:'Courier New',monospace;font-weight:700}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:82px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 20px;border-radius:99px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+@media(min-width:768px){
+  .app-hdr{padding:13px 22px 10px}
+  .toolbar{padding:9px 16px}
+  .kard{margin:5px 16px}
+  .sec-hdr{padding:9px 18px 4px}
+  .fab{max-width:480px;left:50%;right:auto;transform:translateX(-50%)}
+  #vToggle{display:flex}
+}
+@media(max-width:767px){
+  #vToggle{display:none!important}
+  .kard-extra,.read-meta{display:none}
+  th.dt,th.op,th.pod,th.sr,th.ctr{display:none}
+  td.dt,td.op,td.pod,td.sr,td.ctr{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ OPERATOR SCREEN ══ -->
+<div class="auth-bg" id="opScreen">
+  <div class="auth-panel">
+    <div class="auth-logo">⚡</div>
+    <h1 class="auth-h1">Citiri Contoare</h1>
+    <p class="auth-sub">SP Sângeorgiu de Mureș</p>
+    <label class="f-label" for="opName">Numele dumneavoastră (operator)</label>
+    <input class="f-input" id="opName" type="text" placeholder="ex: Ion Popescu" autocomplete="name" autocapitalize="words">
+    <button class="btn btn-p" onclick="startAsOperator()">▶ Începe citirile</button>
+    <div class="divider">sau</div>
+    <button class="btn btn-s" onclick="goToPin()">🔐 Acces Admin (configurare lună)</button>
+  </div>
+</div>
+
+<!-- ══ PIN SCREEN ══ -->
+<div class="auth-bg hidden" id="pinScreen">
+  <div class="auth-panel">
+    <div class="auth-logo">🔐</div>
+    <h1 class="auth-h1">Acces Administrator</h1>
+    <p class="auth-sub">Cod PIN de 4 cifre</p>
+    <div class="pin-dots">
+      <div class="pd" id="pd0"></div><div class="pd" id="pd1"></div>
+      <div class="pd" id="pd2"></div><div class="pd" id="pd3"></div>
+    </div>
+    <div class="pin-err" id="pinErr"></div>
+    <div class="pin-grid">
+      <button class="pb" onclick="pp('1')">1</button><button class="pb" onclick="pp('2')">2</button><button class="pb" onclick="pp('3')">3</button>
+      <button class="pb" onclick="pp('4')">4</button><button class="pb" onclick="pp('5')">5</button><button class="pb" onclick="pp('6')">6</button>
+      <button class="pb" onclick="pp('7')">7</button><button class="pb" onclick="pp('8')">8</button><button class="pb" onclick="pp('9')">9</button>
+      <button class="pb z" onclick="pp('0')">0</button><button class="pb del" onclick="pd()">⌫</button>
+    </div>
+    <button class="btn btn-s" onclick="show('opScreen');hide('pinScreen')">← Înapoi</button>
+  </div>
+</div>
+
+<!-- ══ SETUP / ADMIN ══ -->
+<div class="setup-page hidden" id="setupScreen">
+  <div class="setup-hdr">
+    <h1>⚙️ Configurare Lună</h1>
+    <p id="setupSub">SP Sângeorgiu de Mureș — Administrator</p>
+  </div>
+  <div class="setup-body">
+
+    <div class="card-section">
+      <div class="sec-title">Titlu & etichete coloane</div>
+      <div class="form-row">
+        <div class="ff full">
+          <label>Luna curentă</label>
+          <input id="cfgTitle" type="text" value="Mai 2026" placeholder="ex: Mai 2026">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="ff"><label>Etichetă index referință</label><input id="cfgRef" type="text" value="Index Apr 26"></div>
+        <div class="ff"><label>Etichetă index nou</label><input id="cfgNew" type="text" value="Index Mai 26"></div>
+      </div>
+    </div>
+
+    <div class="card-section">
+      <div class="sec-title">Valori index referință (luna anterioară)</div>
+      <p style="font-size:12px;color:var(--soft);margin-bottom:10px">Modifică doar valorile care s-au schimbat față de luna trecută.</p>
+      <div id="refContainer"></div>
+    </div>
+
+    <div class="card-section" id="histSection">
+      <div class="sec-title">Istoric luni anterioare</div>
+      <div id="histList"><p style="font-size:13px;color:var(--soft)">Nu există date salvate încă.</p></div>
+    </div>
+
+    <div style="padding:0 4px">
+      <button class="btn btn-p" onclick="applySetup()">✅ Salvează și începe luna</button>
+      <button class="btn btn-s" style="margin-top:8px" onclick="backToApp()">← Înapoi la citiri</button>
+      <button class="btn" style="background:#f8e8e8;color:var(--red);margin-top:8px;font-size:13px" onclick="clearCurrentMonth()">🗑 Șterge citirile lunii curente</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div id="appScreen" class="hidden">
+  <header class="app-hdr">
+    <div class="app-hdr-top">
+      <div class="app-title" id="appTitle">📊 Citiri Contoare</div>
+      <button class="hbtn" onclick="goToPin()">⚙️ Admin</button>
+    </div>
+    <div class="app-op" id="appOp"></div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+    <div class="prog-lbl">
+      <span id="progLbl">0 / 38 completate</span>
+      <span id="progPct">0%</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input class="srch" id="srch" type="search" placeholder="🔍 Caută nume sau localitate…" oninput="renderList()">
+    <button class="fbtn on" id="fAll"   onclick="setFilter('all')">Toate</button>
+    <button class="fbtn"    id="fPend"  onclick="setFilter('pend')">Necitite</button>
+    <button class="fbtn"    id="fDone"  onclick="setFilter('done')">Citite</button>
+    <button class="fbtn"    id="fCC"    onclick="setFilter('cc')">CC</button>
+    <button class="fbtn"    id="fCNC"   onclick="setFilter('cnc')">CNC</button>
+    <div id="vToggle" style="display:none;gap:4px;margin-left:auto;align-items:center">
+      <button class="vbtn on" id="vCard"  onclick="setView('card')" title="Carduri">▤</button>
+      <button class="vbtn"    id="vTable" onclick="setView('table')" title="Tabel">☰</button>
+      <button onclick="exportXLSX()" style="margin-left:6px;padding:7px 14px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap" title="Export Excel">⬇️ Export Excel</button>
+    </div>
+  </div>
+
+  <div id="listArea" style="padding-bottom:130px"></div>
+
+  <button class="fab" onclick="openModal()">📋 Rezumat &amp; Export</button>
+</div>
+
+<!-- ══ SUMMARY MODAL ══ -->
+<div class="overlay" id="modalOverlay" onclick="closeOverlayOuter(event,'modalOverlay')">
+  <div class="modal">
+    <h2>Rezumat Citiri</h2>
+    <p class="modal-sub" id="modalSub"></p>
+    <div class="stats-grid">
+      <div class="sbox"><div class="n" id="stTotal">38</div><div class="l">Total abonați</div></div>
+      <div class="sbox g"><div class="n" id="stDone">0</div><div class="l">Completate</div></div>
+      <div class="sbox"><div class="n" id="stPend">38</div><div class="l">Rămase</div></div>
+      <div class="sbox o"><div class="n" id="stPct">0%</div><div class="l">Progres</div></div>
+    </div>
+    <div id="pendBox" class="pend-box hidden">
+      <h4>⚠️ Abonați necititiati:</h4>
+      <div id="pendList"></div>
+    </div>
+    <button class="btn btn-g" onclick="exportXLSX()">⬇️ Descarcă Excel (.xlsx)</button>
+    <button class="btn btn-s" style="margin-top:8px" onclick="closeOverlay('modalOverlay')">Închide</button>
+  </div>
+</div>
+
+<!-- ══ HISTORY DETAIL MODAL ══ -->
+<div class="overlay" id="histModal" onclick="closeOverlayOuter(event,'histModal')">
+  <div class="modal">
+    <h2 id="histModalTitle">Istoric</h2>
+    <p class="modal-sub" id="histModalSub"></p>
+    <div id="histModalBody"></div>
+    <button class="btn btn-g" onclick="exportHistXLSX()" style="margin-top:8px">⬇️ Export Excel</button>
+    <button class="btn btn-s" style="margin-top:8px" onclick="closeOverlay('histModal')">Închide</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  ADMIN PIN  ← schimbă-l aici
+const PIN = '1234';
+// ═══════════════════════════════════════════════
+
+const MASTER = [
+  {id:0,  name:"ANICHITI ADINA TEODORA",       addr:"Tg. Mureș",    street:"Bld. 1 Dec. 1918 nr.252A",  tel:"",             pod:"RGZ201EN0227",    serie:"1001940",          contract:"227/28.08.2019",  tip:"CC",  obsDefault:"Gr. 16 Mureș"},
+  {id:1,  name:"BERNARD FARKAS JOLAND",        addr:"Curteni",      street:"Curteni — Caramizilor",      tel:"0758592142",   pod:"RGZ201EN0228",    serie:"3000073582",       contract:"282/17.10.2022",  tip:"CC",  obsDefault:""},
+  {id:2,  name:"BOAR LIVIU",                   addr:"Curteni",      street:"Curteni — Garat 483A",       tel:"0745576234",   pod:"RGZ201EN0221",    serie:"7772554",          contract:"221/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:3,  name:"BOLOGA CLAUDIU",               addr:"Balȃ",         street:"Balȃ",                       tel:"0758106561",   pod:"RGZ201EN0204",    serie:"1002033",          contract:"204/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:4,  name:"BORZAS MONIKA (1)",            addr:"Damieni",      street:"Damieni — Bisericii 181",    tel:"0740386716",   pod:"RGZ201EN0211",    serie:"25999252",         contract:"211/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:5,  name:"BORZAS MONIKA (2)",            addr:"Damieni",      street:"Damieni — Bisericii 181",    tel:"0745992935",   pod:"RGZ201EN0211/1",  serie:"1959002",          contract:"211/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:6,  name:"BORZAS MONIKA (3)",            addr:"Damieni",      street:"Damieni — Bisericii 181",    tel:"0766424593",   pod:"RGZ201EN0211/2",  serie:"2264627",          contract:"211/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:7,  name:"BOTEZAN ADRIAN",               addr:"Pȃingeni",     street:"Pȃingeni — Gr. 1",           tel:"0744583505",   pod:"RGZ201EN0222",    serie:"371633",           contract:"219/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:8,  name:"CIMPIAN LIVIU",                addr:"Curteni",      street:"Curteni — Bercu Morii 41",   tel:"0740592229",   pod:"RGZ201EN0206",    serie:"7910560",          contract:"206/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:9,  name:"CIOPAIAN TEODOR",              addr:"D-Viișoara",   street:"D-viișoara — Cimitirului 65",tel:"0774045934",   pod:"RGZ201EN0212",    serie:"40040969",         contract:"212/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:10, name:"COROJA EMILIAN",               addr:"Chinari",      street:"Chinari — Bercu Morii 19",   tel:"0740120008",   pod:"RGZ201EN0207",    serie:"143812",           contract:"207/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:11, name:"GROZA LIVIU",                  addr:"Sg. de Mureș", street:"Sg. de Mureș — Gării 53",    tel:"0742760933",   pod:"RGZ201EN0225",    serie:"2370919",          contract:"225/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:12, name:"HALMAGYI ZSIGMOND",            addr:"Curteni",      street:"Curteni — Garat 163B",       tel:"0757693871",   pod:"RGZ201EN0209",    serie:"Nu se poate citi", contract:"209/28.08.2019",  tip:"CC",  obsDefault:"Rate"},
+  {id:13, name:"IUSAN IOAN ALEXANDRU",         addr:"Balȃ",         street:"Balȃ — Principala 357",      tel:"0741133218",   pod:"RGZ227EN0202",    serie:"168323",           contract:"202/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:14, name:"KISS FRANCISC",                addr:"Lunca Tecii",  street:"Lunca Tecii",                tel:"0749787601",   pod:"RGZ201EN0218",    serie:"6000052205",       contract:"218/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:15, name:"KOVACS ENDRE",                 addr:"Chinari",      street:"Chinari — Bercu Morii 17",   tel:"0758438961",   pod:"RGZ201EN0208",    serie:"7014566",          contract:"208/28.08.2019",  tip:"CC",  obsDefault:"Negri"},
+  {id:16, name:"KOVACS VIORICA",               addr:"Chinari",      street:"Chinari — Bercu Morii 17",   tel:"0745359620",   pod:"RGZ201EN0229",    serie:"7898338",          contract:"229/28.08.2019",  tip:"CC",  obsDefault:"Negri"},
+  {id:17, name:"LUCA IOAN SORIN",              addr:"Curteni",      street:"Curteni — Garat 163A",       tel:"0770201516",   pod:"RGZ201EN0215",    serie:"Nu se poate citi", contract:"215/28.08.2019",  tip:"CC",  obsDefault:"Vizavi rate"},
+  {id:18, name:"MARIAN MATEI",                 addr:"Lunca Tecii",  street:"Lunca Tecii",                tel:"0749787601",   pod:"RGZ201EN0217",    serie:"123503",           contract:"217/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:19, name:"MATEA CAROLINA",               addr:"Sg. de Mureș", street:"Sg. de Mureș — Gării 53",    tel:"0744930124",   pod:"RGZ201EN0223",    serie:"16966417",         contract:"223/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:20, name:"MOLDOVAN CODRUTA TEODORA",     addr:"Balȃ",         street:"Balȃ",                       tel:"0741764864",   pod:"RGZ201EN3820",    serie:"7340030",          contract:"3820/01.04.2014", tip:"CC",  obsDefault:"Albine"},
+  {id:21, name:"NAGY LASZLO",                  addr:"Budiu Mic",    street:"Budiu Mic 73A",              tel:"0745429629",   pod:"RGZ201EN0244",    serie:"7996283",          contract:"244/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:22, name:"NGIRISHI GODFREY",             addr:"Chinari",      street:"Chinari — Bercu Morii 17",   tel:"0757959539",   pod:"RGZ201EN0266",    serie:"16701308",         contract:"266/05.09.2019",  tip:"CC",  obsDefault:"Negri"},
+  {id:23, name:"RUSU ALEXANDRU",               addr:"Curteni",      street:"Curteni — Garat 183B",       tel:"0740147371",   pod:"RGZ201EN0216",    serie:"Nu se poate citi", contract:"216/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:24, name:"SANTEAN MARIA",                addr:"Balȃ",         street:"Balȃ — Principala 358",      tel:"0767599191",   pod:"RGZ201EN0203",    serie:"226415",           contract:"203/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:25, name:"SC AQUAFARM TERANA SRL",       addr:"Pȃingeni",     street:"Pȃingeni — Gr. 14",          tel:"",             pod:"RGZ201EN0027",    serie:"8175896",          contract:"27/28.08.2019",   tip:"CNC", obsDefault:""},
+  {id:26, name:"SC OLEANDER GARDEN SRL",       addr:"Chinari",      street:"Chinari — Stație apă",       tel:"",             pod:"RGZ201EN0029",    serie:"33406",            contract:"29/28.08.2019",   tip:"CNC", obsDefault:""},
+  {id:27, name:"SC ORANGE ROMANIA SA",         addr:"Lunca Tecii",  street:"Lunca Tecii — Gr. 9",        tel:"",             pod:"RGZ201EN0020/1",  serie:"4779848",          contract:"20/28.08.2019",   tip:"CNC", obsDefault:""},
+  {id:28, name:"SNTGN TRANSGAZ SA MEDIAS (1)", addr:"Lunca Tecii",  street:"Lunca Tecii — Gr. 9",        tel:"",             pod:"RGZ201EN0019/2",  serie:"3000120625",       contract:"19/28.08.2019",   tip:"CNC", obsDefault:""},
+  {id:29, name:"SNTGN TRANSGAZ SA MEDIAS (2)", addr:"Pȃingeni",     street:"Pȃingeni — Gr. 14",          tel:"",             pod:"RGZ201EN0019/3",  serie:"3000120624",       contract:"19/28.08.2019",   tip:"CNC", obsDefault:""},
+  {id:30, name:"STOICA MARIANA",               addr:"Tg. Mureș",    street:"Bld. 1 Dec. 1918 nr.252",    tel:"0745577201",   pod:"RGZ201EN0220",    serie:"336643",           contract:"220/28.08.2019",  tip:"CC",  obsDefault:"Garaje Gr. 16"},
+  {id:31, name:"SU CORUNCA",                   addr:"Tg. Mureș",    street:"Tg. Mureș — Corunca",        tel:"",             pod:"",                serie:"",                 contract:"",                tip:"CC",  obsDefault:""},
+  {id:32, name:"SU MURES",                     addr:"Tg. Mureș",    street:"Tg. Mureș — Corunca",        tel:"",             pod:"",                serie:"",                 contract:"",                tip:"CC",  obsDefault:""},
+  {id:33, name:"SUCIU ANA",                    addr:"Balȃ",         street:"Balȃ — Gr. 2 Bozed",         tel:"0770242146",   pod:"RGZ201EN0205",    serie:"7695",             contract:"205/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:34, name:"SZEKELY TIBOR",                addr:"Curteni",      street:"Curteni — Viilor",           tel:"0745793240",   pod:"RGZ201EN0213",    serie:"1003630",          contract:"213/28.08.2019",  tip:"CC",  obsDefault:"Flori"},
+  {id:35, name:"TASNADI TIBERIU",              addr:"Budiu Mic",    street:"Budiu Mic 80",               tel:"0748688654",   pod:"RGZ201EN3837",    serie:"1432550",          contract:"241/28.08.2019",  tip:"CC",  obsDefault:""},
+  {id:36, name:"TELEKOM ROMANIA MOB COMM SA",  addr:"Tg. Mureș",    street:"Tg. Mureș — Gr. 11 Mureș",  tel:"",             pod:"RGZ201EN0014",    serie:"1269651",          contract:"14/16.09.2019",   tip:"CNC", obsDefault:""},
+  {id:37, name:"TIMOCEA VASILE",               addr:"Curteni",      street:"Curteni — Gr. 13 Ernei",     tel:"0740460454",   pod:"RGZ201EN0214",    serie:"4970891",          contract:"214/28.08.2019",  tip:"CC",  obsDefault:""},
+];
+
+// Reference values (previous month index) — updated by admin each month
+const DEFAULT_REF = [48089,18218,17285,16956,385,2660,17386,4285,6287,7305,23644,38442,12274,28063,4557,3301,1025,36438,12946,5725,50379,65376,3554,830,120108,45183,150681,68450,30677,11405,52202,1250031,1818279,1331,2983,26381,471736,3358];
+
+// ── STATE ──
+let CFG    = load('sg_cfg') || {title:'Mai 2026', labelRef:'Index Apr 26', labelNew:'Index Mai 26', refs: [...DEFAULT_REF]};
+let session= load('sg_session') || {};   // {id: {val, obs, op, ts}}
+let history= load('sg_history') || [];   // [{month,label,labelRef,labelNew,refs,readings}]
+let operator = load('sg_op') || '';
+let activeFilter = 'all';
+let activeView   = window.innerWidth >= 768 ? 'table' : 'card';
+let pinEntry = '';
+let histViewIdx  = null;
+
+// ── STORAGE ──
+function load(k)     { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }
+function save(k,v)   { localStorage.setItem(k, JSON.stringify(v)); }
+function saveAll()   { save('sg_cfg',CFG); save('sg_session',session); save('sg_history',history); }
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', () => {
+  if (operator) {
+    document.getElementById('opName').value = operator;
+  }
+  // auto-start if operator already set (returning user)
+  if (operator) startAsOperator();
+});
+
+// ── OPERATOR ──
+function startAsOperator() {
+  const nm = document.getElementById('opName').value.trim();
+  if (!nm) { document.getElementById('opName').focus(); toast('Introduceți numele operatorului'); return; }
+  operator = nm; save('sg_op', operator);
+  hide('opScreen'); hide('pinScreen');
+  launchApp();
+}
+
+function launchApp() {
+  document.getElementById('appTitle').textContent = `📊 Citiri Contoare — ${CFG.title}`;
+  document.getElementById('appOp').textContent     = `Operator: ${operator}`;
+  document.getElementById('modalSub').textContent  = `Citiri ${CFG.title} — SP Sg. Mureș`;
+  show('appScreen');
+  renderList();
+  updateProgress();
+}
+
+// ── PIN ──
+function goToPin() { pinEntry=''; renderDots(); document.getElementById('pinErr').textContent=''; hide('opScreen'); hide('appScreen'); show('pinScreen'); }
+
+function pp(d) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += d; renderDots();
+  if (pinEntry.length === 4) {
+    setTimeout(() => {
+      if (pinEntry === PIN) { hide('pinScreen'); showSetup(); }
+      else {
+        document.querySelectorAll('.pd').forEach(e=>e.classList.add('err'));
+        document.getElementById('pinErr').textContent='PIN incorect. Încearcă din nou.';
+        setTimeout(()=>{ pinEntry=''; renderDots(false); document.getElementById('pinErr').textContent=''; }, 900);
+      }
+    }, 150);
+  }
+}
+function pd() { pinEntry=pinEntry.slice(0,-1); renderDots(); }
+function renderDots(filled=true) {
+  for(let i=0;i<4;i++){
+    const d=document.getElementById(`pd${i}`);
+    d.classList.toggle('on', filled && i<pinEntry.length);
+    d.classList.remove('err');
+  }
+}
+
+// ── SETUP ──
+function showSetup() {
+  document.getElementById('cfgTitle').value = CFG.title;
+  document.getElementById('cfgRef').value   = CFG.labelRef;
+  document.getElementById('cfgNew').value   = CFG.labelNew;
+  buildRefInputs();
+  buildHistList();
+  show('setupScreen');
+}
+
+function buildRefInputs() {
+  const c = document.getElementById('refContainer');
+  c.innerHTML = '';
+  MASTER.forEach((m,i) => {
+    const r = document.createElement('div');
+    r.className = 'ref-row';
+    r.innerHTML = `<div class="rn">${m.name}<small>${m.addr} · <span class="badge ${m.tip==='CC'?'b-cc':'b-cnc'}">${m.tip}</span></small></div>
+      <input class="ri" type="number" inputmode="numeric" id="rr${i}" value="${CFG.refs[i] ?? DEFAULT_REF[i]}">`;
+    c.appendChild(r);
+  });
+}
+
+function buildHistList() {
+  const el = document.getElementById('histList');
+  if (!history.length) { el.innerHTML='<p style="font-size:13px;color:var(--soft)">Nu există date salvate încă.</p>'; return; }
+  el.innerHTML = '';
+  [...history].reverse().forEach((h,ri) => {
+    const idx = history.length - 1 - ri;
+    const done = Object.values(h.readings||{}).filter(r=>r.val!=='').length;
+    const pct  = Math.round(done/MASTER.length*100);
+    const row  = document.createElement('div');
+    row.className='hist-row';
+    row.innerHTML=`<div><div class="hist-lbl">${h.label}</div><div class="hist-meta">${done}/${MASTER.length} citite</div></div>
+      <span class="badge ${pct===100?'b-done':'b-part'}">${pct}%</span>`;
+    row.onclick = () => openHistModal(idx);
+    el.appendChild(row);
+  });
+}
+
+function applySetup() {
+  const title   = document.getElementById('cfgTitle').value.trim() || 'Luna curentă';
+  const labelRef= document.getElementById('cfgRef').value.trim()   || 'Index ref.';
+  const labelNew= document.getElementById('cfgNew').value.trim()   || 'Index nou';
+  const refs    = MASTER.map((_,i) => { const v=parseInt(document.getElementById(`rr${i}`)?.value); return isNaN(v)?DEFAULT_REF[i]:v; });
+
+  if (CFG.title !== title && Object.keys(session).length > 0) {
+    // archive current session before starting new month
+    history.push({
+      month: CFG.title.replace(/\s+/g,'_'),
+      label: CFG.title,
+      labelRef: CFG.labelRef,
+      labelNew: CFG.labelNew,
+      refs: [...CFG.refs],
+      readings: {...session}
+    });
+  }
+
+  CFG = {title, labelRef, labelNew, refs};
+  if (CFG.title !== title) session = {};
+  saveAll();
+  hide('setupScreen');
+  if (operator) { launchApp(); }
+  else { show('opScreen'); }
+  toast('Configurare salvată ✓');
+}
+
+function backToApp() {
+  hide('setupScreen');
+  if (operator) launchApp();
+  else show('opScreen');
+}
+
+function clearCurrentMonth() {
+  if (!confirm(`Ștergi toate citirile pentru ${CFG.title}? Această acțiune nu poate fi anulată.`)) return;
+  session = {}; save('sg_session', session);
+  renderList(); updateProgress();
+  hide('setupScreen');
+  if (operator) launchApp();
+  toast('Citiri șterse');
+}
+
+// ── FILTERS / VIEW ──
+function setFilter(f) {
+  activeFilter = f;
+  ['All','Pend','Done','CC','CNC'].forEach(x => document.getElementById(`f${x}`).classList.remove('on'));
+  document.getElementById(`f${f==='all'?'All':f==='pend'?'Pend':f==='done'?'Done':f==='cc'?'CC':'CNC'}`).classList.add('on');
+  renderList();
+}
+
+function setView(v) {
+  activeView = v;
+  document.getElementById('vCard').classList.toggle('on', v==='card');
+  document.getElementById('vTable').classList.toggle('on', v==='table');
+  renderList();
+}
+
+// ── RENDER ──
+function getFiltered() {
+  const q = document.getElementById('srch').value.toLowerCase().trim();
+  return MASTER.filter(m => {
+    if (q && !m.name.toLowerCase().includes(q) && !m.addr.toLowerCase().includes(q)) return false;
+    const done = session[m.id]?.val !== '' && session[m.id]?.val !== undefined;
+    if (activeFilter==='pend' && done) return false;
+    if (activeFilter==='done' && !done) return false;
+    if (activeFilter==='cc'  && m.tip!=='CC')  return false;
+    if (activeFilter==='cnc' && m.tip!=='CNC') return false;
+    return true;
+  });
+}
+
+function renderList() {
+  const area = document.getElementById('listArea');
+  const items = getFiltered();
+  if (!items.length) { area.innerHTML='<div class="no-res">🔍 Niciun rezultat</div>'; return; }
+  if (activeView === 'table') renderTable(area, items);
+  else renderCards(area, items);
+}
+
+function renderCards(area, items) {
+  const addrOrder = [...new Set(MASTER.map(m=>m.addr))];
+  const grouped = {};
+  items.forEach(m => { (grouped[m.addr]||(grouped[m.addr]=[])).push(m); });
+
+  let html = '';
+  addrOrder.forEach(addr => {
+    if (!grouped[addr]) return;
+    html += `<div class="sec-hdr">📍 ${addr}</div>`;
+    grouped[addr].forEach(m => { html += buildCard(m); });
+  });
+  area.innerHTML = html;
+  items.forEach(m => attachCardEvents(m.id));
+}
+
+function buildCard(m) {
+  const s = session[m.id] || {val:'', obs:''};
+  const done = s.val !== '';
+  const ref  = CFG.refs[m.id] ?? DEFAULT_REF[m.id];
+  const consum = done ? (parseInt(s.val) - ref) : null;
+  const csClass = consum===null?'':consum>=0?' pos':' neg';
+  const csVal = consum===null ? '—' : fmt(consum);
+  const meta  = done && s.op ? `Citit de ${s.op} la ${fmtDate(s.ts)}` : '';
+
+  return `<div class="kard${done?' done':''}" id="kard${m.id}">
+    <div class="kard-head">
+      <div class="sdot" id="sdot${m.id}"></div>
+      <div class="kn" style="flex:1">
+        <strong>${m.name}</strong>
+        <span>📍 ${m.street||m.addr} <span class="badge ${m.tip==='CC'?'b-cc':'b-cnc'}">${m.tip}</span></span>
+        ${m.tel ? `<span class="ktel"><a href="tel:${m.tel}">📞 ${m.tel}</a></span>` : ''}
+      </div>
+    </div>
+    <div class="kfields">
+      <div class="kf"><div class="kfl">${CFG.labelRef}</div><div class="kfv">${fmt(ref)}</div></div>
+      <div class="kf kf-in"><div class="kfl">${CFG.labelNew} ✏️</div>
+        <input type="number" inputmode="numeric" pattern="[0-9]*" id="inp${m.id}" value="${s.val}" placeholder="0">
+      </div>
+      <div class="kf kf-cs${csClass}" id="cs${m.id}"><div class="kfl">Consum</div><div class="kfv" id="csv${m.id}">${csVal}</div></div>
+    </div>
+    <div class="kard-extra">
+      <div class="xe"><div class="xl">Adresă</div><div class="xv">${m.street||m.addr}</div></div>
+      <div class="xe"><div class="xl">Telefon</div><div class="xv">${m.tel?`<a href="tel:${m.tel}" style="color:var(--blue-md);text-decoration:none">${m.tel}</a>`:'—'}</div></div>
+      <div class="xe"><div class="xl">POD</div><div class="xv">${m.pod||'—'}</div></div>
+      <div class="xe"><div class="xl">Nr. Contor</div><div class="xv">${m.serie||'—'}</div></div>
+      <div class="xe"><div class="xl">Contract</div><div class="xv">${m.contract||'—'}</div></div>
+      ${m.obsDefault?`<div class="xe"><div class="xl">Notă fixă</div><div class="xv" style="color:var(--gold)">${m.obsDefault}</div></div>`:''}
+    </div>
+    <div class="kard-obs">
+      <input type="text" id="obs${m.id}" value="${s.obs||''}" placeholder="Observații (opțional)">
+    </div>
+    ${meta?`<div class="read-meta">${meta}</div>`:''}
+  </div>`;
+}
+
+function attachCardEvents(id) {
+  const inp = document.getElementById(`inp${id}`);
+  const obs = document.getElementById(`obs${id}`);
+  if (inp) inp.addEventListener('input', () => updateEntry(id));
+  if (obs) obs.addEventListener('input', () => { if(!session[id]) session[id]={val:'',obs:''}; session[id].obs=obs.value; save('sg_session',session); });
+}
+
+function updateEntry(id) {
+  const inp = document.getElementById(`inp${id}`);
+  if (!inp) return;
+  const v = inp.value.trim();
+  if (!session[id]) session[id] = {val:'', obs:''};
+  session[id].val = v;
+  if (v !== '') {
+    session[id].op = operator;
+    session[id].ts = new Date().toISOString();
+  }
+  save('sg_session', session);
+
+  // Update card visuals
+  const ref = CFG.refs[id] ?? DEFAULT_REF[id];
+  const csEl  = document.getElementById(`cs${id}`);
+  const csvEl = document.getElementById(`csv${id}`);
+  const kard  = document.getElementById(`kard${id}`);
+  const sdot  = document.getElementById(`sdot${id}`);
+  if (v !== '') {
+    const c = parseInt(v) - ref;
+    csvEl.textContent = fmt(c);
+    csEl.className = `kf kf-cs ${c>=0?'pos':'neg'}`;
+    kard.classList.add('done'); sdot.style.background='var(--green)';
+  } else {
+    csvEl.textContent = '—';
+    csEl.className = 'kf kf-cs';
+    kard.classList.remove('done'); sdot.style.background='';
+  }
+
+  // Update table row if exists
+  const ti = document.getElementById(`ti${id}`);
+  const tcs = document.getElementById(`tcs${id}`);
+  if (ti && tcs) {
+    ti.value = v;
+    if (v !== '') {
+      const c = parseInt(v) - ref;
+      tcs.textContent = fmt(c); tcs.className = c>=0?'mn cp':'mn cn';
+      document.getElementById(`tr${id}`)?.classList.add('done');
+    } else {
+      tcs.textContent = '—'; tcs.className = 'mn';
+      document.getElementById(`tr${id}`)?.classList.remove('done');
+    }
+  }
+  updateProgress();
+}
+
+function renderTable(area, items) {
+  const addrOrder = [...new Set(MASTER.map(m => m.addr))];
+  const grouped = {};
+  items.forEach(m => { (grouped[m.addr] || (grouped[m.addr] = [])).push(m); });
+
+  let rows = '';
+  addrOrder.forEach(addr => {
+    if (!grouped[addr]) return;
+    const doneInGroup = grouped[addr].filter(m => session[m.id]?.val).length;
+    rows += `<tr class="tbl-sec-row">
+      <td colspan="13">📍 ${addr} <span style="font-size:11px;opacity:.7">${doneInGroup}/${grouped[addr].length} citite</span></td>
+    </tr>`;
+    grouped[addr].forEach(m => {
+      const s   = session[m.id] || {val:'', obs:''};
+      const done= s.val !== '';
+      const ref = CFG.refs[m.id] ?? DEFAULT_REF[m.id];
+      const c   = done ? parseInt(s.val)-ref : null;
+      const telLink = m.tel ? `<a href="tel:${m.tel}" style="color:var(--blue-md);text-decoration:none">${m.tel}</a>` : '—';
+      rows += `<tr id="tr${m.id}" class="${done?'done':''}">
+        <td class="nm">${m.name}</td>
+        <td style="font-size:11px;color:var(--soft)">${m.street||m.addr}</td>
+        <td class="dt">${telLink}</td>
+        <td><span class="badge ${m.tip==='CC'?'b-cc':'b-cnc'}">${m.tip}</span></td>
+        <td class="pod sm">${m.pod||'—'}</td>
+        <td class="sr sm">${m.serie||'—'}</td>
+        <td class="mn">${fmt(ref)}</td>
+        <td><input class="ti" type="number" inputmode="numeric" id="ti${m.id}" value="${s.val}" placeholder="0" oninput="updateEntryTable(${m.id})"></td>
+        <td class="mn ${c===null?'':c>=0?'cp':'cn'}" id="tcs${m.id}">${c===null?'—':fmt(c)}</td>
+        <td class="op"><input class="to" type="text" id="top${m.id}" value="${s.op||operator}" placeholder="${operator}" style="width:110px"></td>
+        <td class="dt" style="font-size:11px;color:var(--soft)">${done&&s.ts?fmtDate(s.ts):''}</td>
+        <td><input class="to" type="text" id="tob${m.id}" value="${s.obs||''}" placeholder="Obs…" oninput="saveObs(${m.id})"></td>
+      </tr>`;
+    });
+  });
+
+  area.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Abonent</th><th>Adresă</th><th class="dt">Telefon</th><th>Tip</th>
+      <th class="pod">POD</th><th class="sr">Nr. Contor</th>
+      <th>${CFG.labelRef}</th><th>${CFG.labelNew} ✏️</th><th>Consum</th>
+      <th class="op">Operator</th><th class="dt">Data citire</th><th>Observații</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function updateEntryTable(id) {
+  const ti  = document.getElementById(`ti${id}`);
+  if (!ti) return;
+  const v   = ti.value.trim();
+  const top = document.getElementById(`top${id}`);
+  if (!session[id]) session[id] = {val:'', obs:''};
+  session[id].val = v;
+  if (v !== '') {
+    session[id].op = top?.value.trim() || operator;
+    session[id].ts = new Date().toISOString();
+  }
+  save('sg_session', session);
+
+  const ref = CFG.refs[id] ?? DEFAULT_REF[id];
+  const tcs = document.getElementById(`tcs${id}`);
+  const tr  = document.getElementById(`tr${id}`);
+  if (tcs) {
+    if (v !== '') {
+      const c = parseInt(v)-ref;
+      tcs.textContent = fmt(c); tcs.className = `mn ${c>=0?'cp':'cn'}`;
+      tr?.classList.add('done');
+    } else {
+      tcs.textContent = '—'; tcs.className = 'mn';
+      tr?.classList.remove('done');
+    }
+  }
+
+  // update card if in DOM
+  const inp = document.getElementById(`inp${id}`);
+  const csv = document.getElementById(`csv${id}`);
+  if (inp) { inp.value = v; }
+  if (csv && v !== '') {
+    const c = parseInt(v) - ref;
+    csv.textContent = fmt(c);
+    document.getElementById(`cs${id}`)?.classList.toggle('pos', c>=0);
+    document.getElementById(`cs${id}`)?.classList.toggle('neg', c<0);
+    document.getElementById(`kard${id}`)?.classList.add('done');
+  }
+  updateProgress();
+}
+
+function saveObs(id) {
+  const tob = document.getElementById(`tob${id}`);
+  if (!session[id]) session[id] = {val:'', obs:''};
+  session[id].obs = tob?.value || '';
+  save('sg_session', session);
+}
+
+// ── PROGRESS ──
+function updateProgress() {
+  const done  = Object.values(session).filter(s=>s.val!=='').length;
+  const total = MASTER.length;
+  const pct   = Math.round(done/total*100);
+  document.getElementById('progFill').style.width = pct+'%';
+  document.getElementById('progLbl').textContent  = `${done} / ${total} completate`;
+  document.getElementById('progPct').textContent  = pct+'%';
+  document.getElementById('stTotal').textContent  = total;
+  document.getElementById('stDone').textContent   = done;
+  document.getElementById('stPend').textContent   = total-done;
+  document.getElementById('stPct').textContent    = pct+'%';
+
+  const pending = MASTER.filter(m => !(session[m.id]?.val));
+  const pb = document.getElementById('pendBox');
+  const pl = document.getElementById('pendList');
+  if (pending.length > 0 && pending.length < total) {
+    pb.classList.remove('hidden');
+    pl.innerHTML = pending.map(m=>`<div class="pend-name">• ${m.name} <span style="color:var(--soft);font-size:11px">(${m.addr})</span></div>`).join('');
+  } else {
+    pb.classList.add('hidden');
+  }
+}
+
+// ── MODAL ──
+function openModal()  { document.getElementById('modalOverlay').classList.add('open'); updateProgress(); }
+function closeOverlay(id) { document.getElementById(id).classList.remove('open'); }
+function closeOverlayOuter(e, id) { if(e.target===document.getElementById(id)) closeOverlay(id); }
+
+// ── HISTORY MODAL ──
+function openHistModal(idx) {
+  histViewIdx = idx;
+  const h = history[idx];
+  document.getElementById('histModalTitle').textContent = `📅 ${h.label}`;
+  const done = Object.values(h.readings||{}).filter(r=>r.val!=='').length;
+  document.getElementById('histModalSub').textContent = `${done}/${MASTER.length} citite`;
+
+  let rows = MASTER.map((m,i) => {
+    const r = h.readings?.[m.id] || {};
+    const ref = h.refs?.[m.id] ?? DEFAULT_REF[m.id];
+    const c   = r.val !== '' && r.val !== undefined ? parseInt(r.val)-ref : null;
+    return `<div class="hd-row">
+      <div class="hd-name">${m.name} <span style="font-size:11px;color:var(--soft)">${m.addr}</span></div>
+      <div class="hd-num">${fmt(ref)}</div>
+      <div class="hd-num">→</div>
+      <div class="hd-num">${r.val||'—'}</div>
+      <div class="hd-cs ${c===null?'':c>=0?'cp':'cn'}">${c===null?'—':fmt(c)} kWh</div>
+    </div>`;
+  }).join('');
+  document.getElementById('histModalBody').innerHTML = `<div class="hist-detail">${rows}</div>`;
+  document.getElementById('histModal').classList.add('open');
+}
+
+// ── EXPORT ──
+function exportXLSX() {
+  const sorted = [...MASTER].sort((a,b)=>a.name.localeCompare(b.name,'ro'));
+  const header = ['Abonent','Localitate','Adresă','Telefon','Tip','POD','Nr. Contor','Contract',CFG.labelRef,CFG.labelNew,'Consum (kWh)','Operator','Data citire','Observații'];
+  const rows = sorted.map(m => {
+    const s   = session[m.id] || {};
+    const ref = CFG.refs[m.id] ?? DEFAULT_REF[m.id];
+    const c   = s.val ? parseInt(s.val)-ref : '';
+    return [m.name, m.addr, m.street||m.addr, m.tel||'', m.tip, m.pod, m.serie, m.contract, ref, s.val?parseInt(s.val):'', c, s.op||'', s.ts?fmtDate(s.ts):'', s.obs||''];
+  });
+  exportSheet([header,...rows], `Citiri_${CFG.title.replace(/\s+/g,'_')}_SgMures.xlsx`, `Citiri ${CFG.title}`.substring(0,31));
+  toast('Excel descărcat ✓');
+}
+
+function exportHistXLSX() {
+  if (histViewIdx===null) return;
+  const h = history[histViewIdx];
+  const sorted = [...MASTER].sort((a,b)=>a.name.localeCompare(b.name,'ro'));
+  const header = ['Abonent','Localitate','Tip','POD','Nr. Contor',h.labelRef||'Index ref.',h.labelNew||'Index nou','Consum (kWh)','Operator','Data citire','Observații'];
+  const rows = sorted.map(m => {
+    const r   = h.readings?.[m.id] || {};
+    const ref = h.refs?.[m.id] ?? DEFAULT_REF[m.id];
+    const c   = r.val ? parseInt(r.val)-ref : '';
+    return [m.name, m.addr, m.tip, m.pod, m.serie, ref, r.val?parseInt(r.val):'', c, r.op||'', r.ts?fmtDate(r.ts):'', r.obs||''];
+  });
+  exportSheet([header,...rows], `Citiri_${h.label.replace(/\s+/g,'_')}_SgMures.xlsx`, h.label.substring(0,31));
+  toast('Excel descărcat ✓');
+}
+
+function exportSheet(data, filename, sheetname) {
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:32},{wch:14},{wch:5},{wch:18},{wch:16},{wch:20},{wch:14},{wch:14},{wch:12},{wch:18},{wch:18},{wch:24}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetname);
+  XLSX.writeFile(wb, filename);
+}
+
+// ── UTILS ──
+function fmt(n) { if(n===''||n===null||n===undefined) return '—'; return Number(n).toLocaleString('ro-RO'); }
+function fmtDate(iso) { if(!iso) return ''; try { return new Date(iso).toLocaleString('ro-RO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); } catch { return iso; } }
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+</script>
+</body>
+</html>
