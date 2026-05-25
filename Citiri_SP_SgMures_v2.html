@@ -246,7 +246,23 @@ td.sm{font-size:11px;color:var(--soft);font-family:'Courier New',monospace}
 
     <div style="padding:0 4px">
       <button class="btn btn-p" onclick="applySetup()">✅ Salvează și începe luna</button>
-      <button class="btn btn-s" style="margin-top:8px" onclick="backToApp()">← Înapoi la citiri</button>
+
+      <!-- FINALIZARE -->
+      <div id="finalizeBox" style="background:#e8f6ef;border:2px solid var(--green);border-radius:10px;padding:14px;margin-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:4px">✅ Finalizare citiri lună</div>
+        <div style="font-size:12px;color:var(--soft);margin-bottom:10px">
+          Indexurile <strong>noi</strong> devin automat <strong>vechi</strong> pentru luna următoare.<br>
+          Citirile curente se arhivează în Istoric.
+        </div>
+        <div style="margin-bottom:10px">
+          <label class="ff" style="font-size:12px;font-weight:600;color:var(--soft)">Numele lunii următoare</label>
+          <input id="nextMonthName" type="text" class="f-input" style="margin-bottom:0;margin-top:4px" placeholder="ex: Iunie 2026">
+        </div>
+        <button class="btn btn-g" onclick="finalizeMonth()" style="margin-top:0">🏁 Finalizează luna și pregătește luna nouă</button>
+        <div id="finalizeStatus" style="font-size:12px;margin-top:8px;color:var(--soft)"></div>
+      </div>
+
+      <button class="btn btn-s" style="margin-top:12px" onclick="backToApp()">← Înapoi la citiri</button>
       <button class="btn" style="background:#f8e8e8;color:var(--red);margin-top:8px;font-size:13px" onclick="clearCurrentMonth()">🗑 Șterge citirile lunii curente</button>
     </div>
   </div>
@@ -517,6 +533,77 @@ function clearCurrentMonth() {
   hide('setupScreen');
   if (operator) launchApp();
   toast('Citiri șterse');
+}
+
+function finalizeMonth() {
+  const nextName = document.getElementById('nextMonthName').value.trim();
+  if (!nextName) {
+    document.getElementById('finalizeStatus').textContent = '⚠️ Introdu numele lunii următoare înainte de finalizare.';
+    document.getElementById('nextMonthName').focus();
+    return;
+  }
+
+  const done  = MASTER.filter(m => session[m.id]?.val !== '' && session[m.id]?.val !== undefined);
+  const total = MASTER.length;
+  const pct   = Math.round(done.length / total * 100);
+
+  let confirmMsg = `Finalizezi luna "${CFG.title}" (${done.length}/${total} citiri — ${pct}%).\n\n`;
+  if (done.length < total) {
+    const missing = MASTER.filter(m => !session[m.id]?.val).map(m => m.name).join(', ');
+    confirmMsg += `⚠️ ATENȚIE: ${total - done.length} abonați NECITIȚI:\n${missing}\n\n`;
+  }
+  confirmMsg += `Indexurile noi vor deveni indexuri vechi pentru "${nextName}".\nContinui?`;
+
+  if (!confirm(confirmMsg)) return;
+
+  // 1. Arhivează luna curentă în istoric
+  history.push({
+    month:    CFG.title.replace(/\s+/g,'_'),
+    label:    CFG.title,
+    labelRef: CFG.labelRef,
+    labelNew: CFG.labelNew,
+    refs:     [...CFG.refs],
+    readings: {...session},
+    finalizedAt: new Date().toISOString(),
+    finalizedBy: operator
+  });
+
+  // 2. Construiește noile referințe: Index Nou devine Index Vechi
+  //    Dacă un abonat nu a fost citit, păstrăm valoarea veche
+  const newRefs = MASTER.map(m => {
+    const v = session[m.id]?.val;
+    return (v !== '' && v !== undefined) ? parseInt(v) : CFG.refs[m.id] ?? DEFAULT_REF[m.id];
+  });
+
+  // 3. Generează etichete automate pentru luna nouă
+  const newLabelRef = CFG.labelNew;  // ex: "Index Mai 26" → devine referință
+  const newLabelNew = `Index ${nextName.split(' ')[0].substring(0,3)} ${nextName.split(' ')[1]?.slice(-2) || ''}`.trim();
+
+  // 4. Actualizează configurația pentru luna nouă
+  CFG = {
+    title:    nextName,
+    labelRef: newLabelRef,
+    labelNew: newLabelNew,
+    refs:     newRefs
+  };
+
+  // 5. Resetează citirile curente
+  session = {};
+
+  // 6. Salvează totul
+  saveAll();
+
+  // 7. Actualizează UI-ul paginii de setup
+  document.getElementById('cfgTitle').value = CFG.title;
+  document.getElementById('cfgRef').value   = CFG.labelRef;
+  document.getElementById('cfgNew').value   = CFG.labelNew;
+  buildRefInputs();
+  buildHistList();
+  document.getElementById('nextMonthName').value = '';
+  document.getElementById('finalizeStatus').innerHTML =
+    `<span style="color:var(--green);font-weight:700">✅ Luna "${history[history.length-1].label}" arhivată! Pregătit pentru "${CFG.title}".</span>`;
+
+  toast(`Luna finalizată! Pregătit pentru ${CFG.title} ✓`);
 }
 
 // ── FILTERS / VIEW ──
