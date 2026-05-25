@@ -299,7 +299,10 @@ td.sm{font-size:11px;color:var(--soft);font-family:'Courier New',monospace}
 
   <div id="listArea" style="padding-bottom:130px"></div>
 
-  <button class="fab" onclick="openModal()">📋 Rezumat &amp; Export</button>
+  <div style="position:fixed;bottom:18px;left:12px;right:12px;display:flex;gap:8px;z-index:200">
+    <button class="fab" style="flex:1" onclick="openModal()">📋 Rezumat &amp; Export</button>
+    <button class="fab" style="flex:0 0 auto;padding:15px 16px;background:#1a6a3a" onclick="shareSnapshot()" title="Trimite link raport">📤</button>
+  </div>
 </div>
 
 <!-- ══ SUMMARY MODAL ══ -->
@@ -331,6 +334,39 @@ td.sm{font-size:11px;color:var(--soft);font-family:'Courier New',monospace}
     <button class="btn btn-g" onclick="exportHistXLSX()" style="margin-top:8px">⬇️ Export Excel</button>
     <button class="btn btn-s" style="margin-top:8px" onclick="closeOverlay('histModal')">Închide</button>
   </div>
+</div>
+
+<!-- ══ SHARE MODAL ══ -->
+<div class="overlay" id="shareModal" onclick="closeOverlayOuter(event,'shareModal')">
+  <div class="modal">
+    <h2>📤 Trimite raport</h2>
+    <p class="modal-sub" id="shareSub"></p>
+    <div id="shareStats" class="stats-grid" style="margin-bottom:14px"></div>
+    <div style="background:var(--gray);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.7px">Link raport (copiază și trimite)</div>
+      <div id="shareUrl" style="font-size:11px;word-break:break-all;color:var(--blue);font-family:'Courier New',monospace;line-height:1.5;max-height:80px;overflow:auto"></div>
+    </div>
+    <button class="btn btn-p" onclick="copyShareLink()">📋 Copiază linkul</button>
+    <button class="btn" style="background:#25D366;color:#fff;margin-top:8px" onclick="shareWhatsApp()">💬 Trimite pe WhatsApp</button>
+    <button class="btn btn-s" style="margin-top:8px" onclick="closeOverlay('shareModal')">Închide</button>
+  </div>
+</div>
+
+<!-- ══ SNAPSHOT VIEW (read-only) ══ -->
+<div id="snapshotScreen" class="hidden">
+  <div class="app-hdr" style="background:#1a6a3a">
+    <div class="app-hdr-top">
+      <div class="app-title" id="snapTitle">📊 Raport Citiri</div>
+      <button class="hbtn" onclick="exportSnapshotXLSX()">⬇️ Excel</button>
+    </div>
+    <div class="app-op" id="snapMeta"></div>
+    <div class="prog-bar"><div class="prog-fill" id="snapFill"></div></div>
+    <div class="prog-lbl"><span id="snapLbl"></span><span id="snapPct"></span></div>
+  </div>
+  <div style="background:#e8f6ef;padding:10px 14px;font-size:12px;color:#1a6a3a;font-weight:600;text-align:center">
+    👁 Vizualizare raport — doar citire
+  </div>
+  <div id="snapList" style="padding-bottom:40px"></div>
 </div>
 
 <!-- Toast -->
@@ -403,6 +439,9 @@ function saveAll()   { save('sg_cfg',CFG); save('sg_session',session); save('sg_
 
 // ── INIT ──
 window.addEventListener('DOMContentLoaded', () => {
+  // Dacă linkul conține un snapshot, îl afișăm direct (mod read-only)
+  if (checkSnapshotMode()) return;
+
   if (operator) {
     document.getElementById('opName').value = operator;
   }
@@ -953,6 +992,130 @@ function exportSheet(data, filename, sheetname) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetname);
   XLSX.writeFile(wb, filename);
+}
+
+// ── SHARE / SNAPSHOT ──
+function shareSnapshot() {
+  const done  = Object.values(session).filter(s => s.val !== '').length;
+  const total = MASTER.length;
+  const pct   = Math.round(done / total * 100);
+
+  // Codifică datele în URL
+  const payload = {
+    cfg: { title: CFG.title, labelRef: CFG.labelRef, labelNew: CFG.labelNew, refs: CFG.refs },
+    session,
+    sharedBy: operator,
+    sharedAt: new Date().toISOString()
+  };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const url = `${location.href.split('#')[0]}#snap=${encoded}`;
+
+  document.getElementById('shareSub').textContent  = `${CFG.title} — ${done}/${total} citiri (${pct}%)`;
+  document.getElementById('shareStats').innerHTML  = `
+    <div class="sbox"><div class="n">${done}</div><div class="l">Citite</div></div>
+    <div class="sbox"><div class="n" style="color:var(--red)">${total-done}</div><div class="l">Rămase</div></div>`;
+  document.getElementById('shareUrl').textContent  = url;
+  document.getElementById('shareModal').dataset.url = url;
+  document.getElementById('shareModal').classList.add('open');
+}
+
+function copyShareLink() {
+  const url = document.getElementById('shareModal').dataset.url;
+  navigator.clipboard.writeText(url).then(() => toast('Link copiat! ✓')).catch(() => {
+    prompt('Copiază manual linkul:', url);
+  });
+}
+
+function shareWhatsApp() {
+  const url  = document.getElementById('shareModal').dataset.url;
+  const done = Object.values(session).filter(s => s.val !== '').length;
+  const text = `📊 Raport citiri ${CFG.title} — ${done}/${MASTER.length} completate\n${url}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+// ── DETECTARE SNAPSHOT LA ÎNCĂRCARE ──
+function checkSnapshotMode() {
+  const hash = location.hash;
+  if (!hash.startsWith('#snap=')) return false;
+  try {
+    const raw  = decodeURIComponent(escape(atob(hash.slice(6))));
+    const data = JSON.parse(raw);
+    renderSnapshot(data);
+    return true;
+  } catch (e) {
+    console.warn('Snapshot invalid', e);
+    return false;
+  }
+}
+
+function renderSnapshot(data) {
+  const { cfg, session: snap, sharedBy, sharedAt } = data;
+  const done  = Object.values(snap).filter(s => s.val !== '').length;
+  const total = MASTER.length;
+  const pct   = Math.round(done / total * 100);
+
+  hide('opScreen'); hide('pinScreen'); hide('appScreen');
+  show('snapshotScreen');
+
+  document.getElementById('snapTitle').textContent = `📊 ${cfg.title}`;
+  document.getElementById('snapMeta').textContent  = `Trimis de ${sharedBy || '?'} la ${fmtDate(sharedAt)}`;
+  document.getElementById('snapFill').style.width  = pct + '%';
+  document.getElementById('snapLbl').textContent   = `${done} / ${total} citite`;
+  document.getElementById('snapPct').textContent   = pct + '%';
+
+  // Construiește lista read-only grupată pe localități
+  const addrOrder = [...new Set(MASTER.map(m => m.addr))];
+  const grouped = {};
+  MASTER.forEach(m => { (grouped[m.addr] || (grouped[m.addr] = [])).push(m); });
+
+  let html = '';
+  addrOrder.forEach(addr => {
+    const grp = grouped[addr];
+    if (!grp) return;
+    html += `<div class="sec-hdr">📍 ${addr}</div>`;
+    grp.forEach(m => {
+      const s   = snap[m.id] || {};
+      const ref = cfg.refs?.[m.id] ?? DEFAULT_REF[m.id];
+      const done= s.val !== '' && s.val !== undefined;
+      const c   = done ? parseInt(s.val) - ref : null;
+      html += `<div class="kard${done?' done':''}">
+        <div class="kard-head">
+          <div class="sdot" style="background:${done?'var(--green)':'var(--gray-md)'}"></div>
+          <div class="kn" style="flex:1">
+            <strong>${m.name}</strong>
+            <span>📍 ${m.street||m.addr} <span class="badge ${m.tip==='CC'?'b-cc':'b-cnc'}">${m.tip}</span></span>
+            ${m.tel?`<span class="ktel"><a href="tel:${m.tel}">📞 ${m.tel}</a></span>`:''}
+          </div>
+        </div>
+        <div class="kfields">
+          <div class="kf"><div class="kfl">${cfg.labelRef}</div><div class="kfv">${fmt(ref)}</div></div>
+          <div class="kf ${done?'kf-in':''}"><div class="kfl">${cfg.labelNew}</div><div class="kfv">${done?fmt(parseInt(s.val)):'—'}</div></div>
+          <div class="kf kf-cs${c===null?'':c>=0?' pos':' neg'}"><div class="kfl">Consum</div><div class="kfv">${c===null?'—':fmt(c)}</div></div>
+        </div>
+        ${s.obs?`<div style="padding:5px 12px 8px;font-size:12px;color:var(--soft)">📝 ${s.obs}</div>`:''}
+        ${done&&s.op?`<div class="read-meta" style="display:block">Citit de ${s.op} la ${fmtDate(s.ts)}</div>`:''}
+      </div>`;
+    });
+  });
+  document.getElementById('snapList').innerHTML = html;
+
+  // Stochează datele pentru export Excel din snapshot
+  window._snapData = data;
+}
+
+function exportSnapshotXLSX() {
+  if (!window._snapData) return;
+  const { cfg, session: snap, sharedBy, sharedAt } = window._snapData;
+  const sorted = [...MASTER].sort((a, b) => a.name.localeCompare(b.name, 'ro'));
+  const header = ['Abonent','Localitate','Adresă','Telefon','Tip',cfg.labelRef,cfg.labelNew,'Consum (kWh)','Operator','Data citire','Observații'];
+  const rows = sorted.map(m => {
+    const s   = snap[m.id] || {};
+    const ref = cfg.refs?.[m.id] ?? DEFAULT_REF[m.id];
+    const c   = s.val ? parseInt(s.val) - ref : '';
+    return [m.name, m.addr, m.street||m.addr, m.tel||'', m.tip, ref, s.val?parseInt(s.val):'', c, s.op||'', s.ts?fmtDate(s.ts):'', s.obs||''];
+  });
+  exportSheet([header, ...rows], `Raport_${cfg.title.replace(/\s+/g,'_')}_SgMures.xlsx`, cfg.title.substring(0,31));
+  toast('Excel descărcat ✓');
 }
 
 // ── UTILS ──
