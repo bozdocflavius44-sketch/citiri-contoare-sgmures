@@ -526,6 +526,23 @@ function backToApp() {
   else show('opScreen');
 }
 
+function editRef(id) {
+  const m   = MASTER[id];
+  const cur = CFG.refs[id] ?? DEFAULT_REF[id];
+  const val = prompt(`Modifică index vechi pentru:\n${m.name} (${m.addr})\n\nValoare curentă: ${cur}`, cur);
+  if (val === null) return;                          // anulat
+  const n = parseInt(val);
+  if (isNaN(n) || n < 0) { toast('Valoare invalidă'); return; }
+  CFG.refs[id] = n;
+  save('sg_cfg', CFG);
+  // actualizează afișajul pe card
+  const el = document.getElementById(`refval${id}`);
+  if (el) el.textContent = fmt(n);
+  // recalculează consumul dacă există deja un index nou introdus
+  updateEntry(id);
+  toast(`Index vechi actualizat: ${m.name} → ${fmt(n)}`);
+}
+
 function clearCurrentMonth() {
   if (!confirm(`Ștergi toate citirile pentru ${CFG.title}? Această acțiune nu poate fi anulată.`)) return;
   session = {}; save('sg_session', session);
@@ -677,7 +694,10 @@ function buildCard(m) {
       </div>
     </div>
     <div class="kfields">
-      <div class="kf"><div class="kfl">${CFG.labelRef}</div><div class="kfv">${fmt(ref)}</div></div>
+      <div class="kf" onclick="editRef(${m.id})" style="cursor:pointer" title="Apasă pentru a modifica index vechi">
+        <div class="kfl">${CFG.labelRef} <span style="opacity:.5;font-size:9px">✎</span></div>
+        <div class="kfv" id="refval${m.id}">${fmt(ref)}</div>
+      </div>
       <div class="kf kf-in"><div class="kfl">${CFG.labelNew} ✏️</div>
         <input type="number" inputmode="numeric" pattern="[0-9]*" id="inp${m.id}" value="${s.val}" placeholder="0">
       </div>
@@ -776,7 +796,7 @@ function renderTable(area, items) {
         <td><span class="badge ${m.tip==='CC'?'b-cc':'b-cnc'}">${m.tip}</span></td>
         <td class="pod sm">${m.pod||'—'}</td>
         <td class="sr sm">${m.serie||'—'}</td>
-        <td class="mn">${fmt(ref)}</td>
+        <td class="mn" id="refval${m.id}" onclick="editRef(${m.id})" style="cursor:pointer" title="Click pentru modificare">${fmt(ref)} <span style="opacity:.35;font-size:10px">✎</span></td>
         <td><input class="ti" type="number" inputmode="numeric" id="ti${m.id}" value="${s.val}" placeholder="0" oninput="updateEntryTable(${m.id})"></td>
         <td class="mn ${c===null?'':c>=0?'cp':'cn'}" id="tcs${m.id}">${c===null?'—':fmt(c)}</td>
         <td class="op"><input class="to" type="text" id="top${m.id}" value="${s.op||operator}" placeholder="${operator}" style="width:110px"></td>
