@@ -363,8 +363,14 @@ td.sm{font-size:11px;color:var(--soft);font-family:'Courier New',monospace}
     <div class="prog-bar"><div class="prog-fill" id="snapFill"></div></div>
     <div class="prog-lbl"><span id="snapLbl"></span><span id="snapPct"></span></div>
   </div>
-  <div style="background:#e8f6ef;padding:10px 14px;font-size:12px;color:#1a6a3a;font-weight:600;text-align:center">
-    👁 Vizualizare raport — doar citire
+  <div style="background:#e8f6ef;padding:10px 14px;border-bottom:1px solid #b8e0c8">
+    <div style="font-size:12px;color:#1a6a3a;font-weight:600;text-align:center;margin-bottom:8px">👁 Vizualizare raport — doar citire</div>
+    <button onclick="importSnapshot()" style="width:100%;padding:12px;background:var(--blue);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer">
+      📥 Importă citirile în aplicația mea
+    </button>
+    <div style="font-size:11px;color:var(--soft);text-align:center;margin-top:6px">
+      Datele se salvează în aplicația ta — poți continua de unde a rămas operatorul
+    </div>
   </div>
   <div id="snapList" style="padding-bottom:40px"></div>
 </div>
@@ -1101,6 +1107,37 @@ function renderSnapshot(data) {
 
   // Stochează datele pentru export Excel din snapshot
   window._snapData = data;
+}
+
+function importSnapshot() {
+  if (!window._snapData) return;
+  const { cfg, session: snap, sharedBy, sharedAt } = window._snapData;
+
+  const done  = Object.values(snap).filter(s => s.val !== '').length;
+  const msg   = `Imporți citirile trimise de "${sharedBy || 'operator'}"?\n\n` +
+                `Luna: ${cfg.title}\n` +
+                `Citiri importate: ${done}/${MASTER.length}\n\n` +
+                `⚠️ Datele tale existente pentru această lună vor fi înlocuite.`;
+
+  if (!confirm(msg)) return;
+
+  // Importă configurația și citirile în localStorage-ul acestui dispozitiv
+  CFG     = { title: cfg.title, labelRef: cfg.labelRef, labelNew: cfg.labelNew, refs: cfg.refs };
+  session = { ...snap };
+  saveAll();
+
+  // Îi cerem și numele operatorului dacă nu e setat
+  if (!operator) {
+    const name = prompt('Introdu numele tău (pentru identificare citiri):', '') || 'Dispecer';
+    operator = name;
+    save('sg_op', operator);
+  }
+
+  // Ieșim din modul snapshot și deschidem aplicația normală
+  history.replaceState(null, '', location.href.split('#')[0]);
+  hide('snapshotScreen');
+  launchApp();
+  toast(`✅ ${done} citiri importate din raportul lui ${sharedBy || 'operator'}!`);
 }
 
 function exportSnapshotXLSX() {
